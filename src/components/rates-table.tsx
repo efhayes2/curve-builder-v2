@@ -20,26 +20,12 @@ type Props = {
 export const RatesTable = ({ data }: Props) => {
   const [protocolFilter, setProtocolFilter] = useState<string | null>(null)
   const [tokenFilter, setTokenFilter] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<keyof ProtocolDataRow | null>('token')
-  const [sortAsc, setSortAsc] = useState(true)
 
   const filteredData = useMemo(() => {
     return data
         .filter((row) => !protocolFilter || row.protocol === protocolFilter)
         .filter((row) => !tokenFilter || row.token === tokenFilter)
-        .sort((a, b) => {
-          if (!sortKey) return 0
-          const aVal = a[sortKey]
-          const bVal = b[sortKey]
-          if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
-          }
-          if (typeof aVal === 'number' && typeof bVal === 'number') {
-            return sortAsc ? aVal - bVal : bVal - aVal
-          }
-          return 0
-        })
-  }, [data, protocolFilter, tokenFilter, sortKey, sortAsc])
+  }, [data, protocolFilter, tokenFilter])
 
   const formattedData: FormattedDataRow[] = useMemo(() => {
     return filteredData.map(formatRow)
