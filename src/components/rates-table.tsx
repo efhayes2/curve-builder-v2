@@ -20,7 +20,6 @@ type Props = {
 export const RatesTable = ({ data }: Props) => {
   const [protocolFilter, setProtocolFilter] = useState<string | null>(null)
   const [tokenFilter, setTokenFilter] = useState<string | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<keyof ProtocolDataRow | null>('token')
   const [sortAsc, setSortAsc] = useState(true)
 
@@ -28,7 +27,6 @@ export const RatesTable = ({ data }: Props) => {
     return data
         .filter((row) => !protocolFilter || row.protocol === protocolFilter)
         .filter((row) => !tokenFilter || row.token === tokenFilter)
-        .filter((row) => !categoryFilter || row.category === categoryFilter)
         .sort((a, b) => {
           if (!sortKey) return 0
           const aVal = a[sortKey]
@@ -41,24 +39,14 @@ export const RatesTable = ({ data }: Props) => {
           }
           return 0
         })
-  }, [data, protocolFilter, tokenFilter, categoryFilter, sortKey, sortAsc])
+  }, [data, protocolFilter, tokenFilter, sortKey, sortAsc])
 
   const formattedData: FormattedDataRow[] = useMemo(() => {
     return filteredData.map(formatRow)
   }, [filteredData])
 
   const unique = (key: keyof ProtocolDataRow) => [...new Set(data.map(d => d[key]))]
-
-  const toggleSort = (key: keyof ProtocolDataRow) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc)
-    } else {
-      setSortKey(key)
-      setSortAsc(true)
-    }
-  }
-
-  return (
+    return (
       <div className="space-y-2">
         <div className="flex gap-4">
           <select onChange={(e) => setProtocolFilter(e.target.value || null)} value={protocolFilter ?? ''}>
@@ -74,21 +62,13 @@ export const RatesTable = ({ data }: Props) => {
                 <option key={t} value={t}>{t}</option>
             ))}
           </select>
-
-          <select onChange={(e) => setCategoryFilter(e.target.value || null)} value={categoryFilter ?? ''}>
-            <option value="">All Categories</option>
-            {unique('category').map((c) => (
-                <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
         </div>
 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead onClick={() => toggleSort('protocol')} className="cursor-pointer">Protocol</TableHead>
-              <TableHead onClick={() => toggleSort('token')} className="cursor-pointer">Token</TableHead>
-              <TableHead onClick={() => toggleSort('category')} className="cursor-pointer">Category</TableHead>
+              <TableHead>Protocol</TableHead>
+              <TableHead>Token</TableHead>
               <TableHead>Lending<br />Rate</TableHead>
               <TableHead>Borrow<br />Rate</TableHead>
               <TableHead>Liquidity</TableHead>
@@ -99,11 +79,6 @@ export const RatesTable = ({ data }: Props) => {
               <TableHead>Collateral<br />Weight</TableHead>
               <TableHead>Liability<br />Weight</TableHead>
               <TableHead>LTV</TableHead>
-              <TableHead>Borrow<br />Cap</TableHead>
-              <TableHead>Deposit<br />Cap</TableHead>
-              <TableHead>Borrow<br />Fee</TableHead>
-              <TableHead>Flash<br />Fee</TableHead>
-              <TableHead>Fixed<br />Fee</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -121,7 +96,6 @@ export const RatesTable = ({ data }: Props) => {
                     />
                     {row.token}
                   </TableCell>
-                  <TableCell className="text-green-600">{row.category}</TableCell>
                   <TableCell className="text-green-600">{row.lendingRate}</TableCell>
                   <TableCell className="text-yellow-600">{row.borrowingRate}</TableCell>
                   <TableCell>{row.liquidity}</TableCell>
@@ -132,11 +106,6 @@ export const RatesTable = ({ data }: Props) => {
                   <TableCell>{row.collateralWeight}</TableCell>
                   <TableCell>{row.liabilityWeight}</TableCell>
                   <TableCell>{row.ltv}</TableCell>
-                  <TableCell>{row.borrowCap}</TableCell>
-                  <TableCell>{row.depositCap}</TableCell>
-                  <TableCell>{row.borrowFee}</TableCell>
-                  <TableCell>{row.flashLoanFee}</TableCell>
-                  <TableCell>{row.fixedHostInterestRate}</TableCell>
                 </TableRow>
             ))}
           </TableBody>

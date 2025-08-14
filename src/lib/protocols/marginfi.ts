@@ -38,16 +38,6 @@ export async function getMarginfiRates(connection: Connection, tokenData: Record
                 const liabilityQty = bank.getTotalLiabilityQuantity().toNumber() / factor;
                 const liquidity_ = assetQty - liabilityQty;
 
-                const remainingCapacity = bank.computeRemainingCapacity();
-                const remainingDepositCapacity = remainingCapacity.depositCapacity.toNumber() / factor;
-                const remainingBorrowCapacity = remainingCapacity.borrowCapacity.toNumber() / factor;
-
-                const accuracyFactor = 10000.0;
-                const borrowCap_ = Math.round((remainingBorrowCapacity + liabilityQty) / accuracyFactor)
-                    * accuracyFactor;
-                const depositCap_ = Math.round((remainingDepositCapacity + assetQty) / accuracyFactor)
-                    * accuracyFactor;
-
                 const assetWeightInit_ = bank.config.assetWeightInit.toNumber();
                 const liabilityWeight_ = bank.config.liabilityWeightInit.toNumber();
                 const ltv_ = 1 / liabilityWeight_;
@@ -66,7 +56,6 @@ export async function getMarginfiRates(connection: Connection, tokenData: Record
                 const rate: ProtocolDataRow = {
                     protocol: 'Marginfi',
                     token: metadata.tokenSymbol,
-                    category: metadata.category,
                     liquidity: liquidity_,
                     currentUtilization: utilization_,
                     targetUtilization: optimalUtilization_,
@@ -77,11 +66,6 @@ export async function getMarginfiRates(connection: Connection, tokenData: Record
                     collateralWeight: assetWeightInit_,
                     liabilityWeight: liabilityWeight_,
                     ltv: ltv_,
-                    borrowCap: borrowCap_,
-                    depositCap: depositCap_,
-                    flashLoanFee: "-",
-                    fixedHostInterestRate: "-",
-                    borrowFee: "-",
                 }
 
                 for (const [key, value] of Object.entries(rate)) {
@@ -98,14 +82,7 @@ export async function getMarginfiRates(connection: Connection, tokenData: Record
             }
         })
         .filter((r): r is ProtocolDataRow => r !== null)
-        .sort((a, b) => {
-            const cat = a!.category.localeCompare(b!.category)
-            return cat !== 0 ? cat : a!.token.localeCompare(b!.token)
-        })
 
-    // ⛳ If you're calling this from an API route:
-    // return Response.json(bankRates)
 
-    // ✅ If this is a utility/helper function:
     return bankRates
 }

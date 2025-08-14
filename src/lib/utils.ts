@@ -35,7 +35,6 @@ export function formatRow(row: ProtocolDataRow): FormattedDataRow {
     return {
         protocol: row.protocol,
         token: row.token,
-        category: row.category,
         liquidity: formatCompactNumber(row.liquidity),
         currentUtilization: formatPercent(row.currentUtilization),
         targetUtilization: formatPercent(row.targetUtilization),
@@ -46,13 +45,6 @@ export function formatRow(row: ProtocolDataRow): FormattedDataRow {
         collateralWeight: formatPercent(row.collateralWeight, 0),
         liabilityWeight: formatFixed(row.liabilityWeight, 2),
         ltv: formatPercent(row.ltv, 0),
-        borrowCap: formatCompactNumber(row.borrowCap),
-        depositCap: isNaN(Number(row.depositCap))
-            ? String(row.depositCap)
-            : formatCompactNumber(row.depositCap),
-        borrowFee: formatPercent(row.borrowFee, 1),
-        flashLoanFee: formatPercent(row.flashLoanFee, 3),
-        fixedHostInterestRate: formatPercent(row.fixedHostInterestRate, 1),
     };
 }
 
@@ -65,7 +57,7 @@ export type TokenData = {
 
 
 export function getTokenDataMap(): Record<string, TokenData> {
-    const useFullTable = true;
+    const useFullTable = false;
     if (useFullTable)
         return getTokenDataMapFull();
     return getTokenDataMapPartial();

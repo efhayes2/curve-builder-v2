@@ -65,17 +65,12 @@ export async function getKaminoRates(
                     const liabilityWeight_ = stats.borrowFactor / 100.0
                     const ltv_ = 1.0 / liabilityWeight_
 
-                    const numberString = stats.reserveDepositLimit.toString();
-                    const depositLimit = Number(numberString) / mintFactor
-                    const numberString2 = stats.reserveBorrowLimit.toString();
-                    const borrowLimit = Number(numberString2) / mintFactor;
-
 
                     // ---- Borrow curve logging (transform at assignment) ----
                     const borrowCurve = stats.borrowCurve // [number, number][]
                     const borrowRateCurvePoints = k.state.config.borrowRateCurve.points
                     borrowCurveLog[metadata.tokenSymbol] = transformBorrowCurve(borrowCurve)
-                    // const referralFeeBps = kaminoMarket.state.referralFeeBps;
+
                     const protocolTakeRatePct = k.state.config.protocolTakeRatePct;
                     const slotAdjustmentFactor = k.slotAdjustmentFactor();
                     const fixedHostInterestRate =  k.getFixedHostInterestRate().toNumber()
@@ -113,7 +108,6 @@ export async function getKaminoRates(
                     const rate: ProtocolDataRow = {
                         "protocol": 'Kamino',
                         "token": metadata.tokenSymbol,
-                        "category": metadata.category,
                         "liquidity": liquidity_,
                         "currentUtilization": utilization,
                         "targetUtilization": marginfiOptimal,
@@ -124,11 +118,6 @@ export async function getKaminoRates(
                         "collateralWeight": assetWeight,
                         "liabilityWeight": liabilityWeight_,
                         "ltv": ltv_,
-                        "borrowCap": borrowLimit,
-                        "depositCap": depositLimit,
-                        "flashLoanFee": k.getFlashLoanFee().toNumber(),
-                        "fixedHostInterestRate": k.getFixedHostInterestRate().toNumber(),
-                        "borrowFee": k.getBorrowFee().toNumber(),
                     }
 
                     // Normalize undefined/nulls to NaN for downstream formatting
@@ -146,10 +135,6 @@ export async function getKaminoRates(
                 }
             })
             .filter((r): r is ProtocolDataRow => r !== null)
-            .sort((a, b) => {
-                const cat = a.category.localeCompare(b.category)
-                return cat !== 0 ? cat : a.token.localeCompare(b.token)
-            })
 
         // Write once per run (timestamped file)
         // Only write locally (skip in Vercel or production)
