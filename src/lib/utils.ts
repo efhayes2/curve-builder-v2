@@ -9,6 +9,72 @@ export function cn(...inputs: ClassValue[]) {
 
 import { ProtocolDataRow } from "@/lib/types";
 
+
+// Types used by the table for the option list
+export type MarketOption = {
+    key: string;               // `${protocol}_${token}`
+    protocol: string;
+    token: string;
+    row: ProtocolDataRow;
+};
+
+/**
+ * Apply coupling rules when one row's Protocol_Token selection changes.
+ *
+ * Rules:
+ * 1) If protocol == marginfi:
+ *    a) if kamino_token exists, change the other row to that
+ *    b) elif drift_token exists, change the other row to that
+ *    c) elif save_token exists, change the other row to that
+ *    d) elif anyProtocol_token exists, change the other row to that
+ *    e) else, don't change the other row
+ * 2) If protocol != marginfi:
+ *    a) change the other row to marginfi_token if it exists
+ *    b) else, don't change the other row
+ */
+export function computeCoupledSelections(
+    options: MarketOption[],
+    currentSelections: [string, string], // [row0Key, row1Key]
+    changedIndex: 0 | 1,
+    newKey: string
+): [string, string] {
+    const otherIndex = changedIndex === 0 ? 1 : 0;
+    const next: [string, string] = [...currentSelections] as [string, string];
+    next[changedIndex] = newKey;
+
+    const picked = options.find(o => o.key === newKey);
+    if (!picked) return next; // invalid selection; do nothing safely
+
+    const token = picked.token;
+    const proto = picked.protocol.toLowerCase();
+
+    const findKey = (protocol?: string, tokenFilter?: string) =>
+        options.find(o =>
+            (protocol ? o.protocol.toLowerCase() === protocol.toLowerCase() : true) &&
+            (tokenFilter ? o.token === tokenFilter : true)
+        )?.key ?? null;
+
+    if (proto === 'marginfi') {
+        // 1a → 1b → 1c → 1d
+        const desired =
+            findKey('kamino', token) ??
+            findKey('drift', token) ??
+            findKey('save', token) ??
+            findKey(undefined, token); // any protocol with same token
+
+        if (desired) next[otherIndex] = desired;
+        // 1e: else leave the other row unchanged
+    } else {
+        // 2a → 2b
+        const desired = findKey('marginfi', token);
+        if (desired) next[otherIndex] = desired;
+        // else leave unchanged
+    }
+
+    return next;
+}
+
+
 export type FormattedDataRow = { [K in keyof ProtocolDataRow]: string };
 
 export function formatRow(row: ProtocolDataRow): FormattedDataRow {

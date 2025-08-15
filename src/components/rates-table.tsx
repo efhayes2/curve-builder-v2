@@ -1,8 +1,8 @@
 'use client'
 
 import { ProtocolDataRow } from '@/lib/types'
-import { formatRow, FormattedDataRow } from '@/lib/utils'
-import { useMemo, useState } from 'react'
+import {computeCoupledSelections, formatRow, FormattedDataRow} from '@/lib/utils'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import {
   Table,
@@ -15,46 +15,131 @@ import {
 
 type Props = {
   data: ProtocolDataRow[]
+  /** Optional: fire when a row selection changes so graphs can update */
+  onRowChange?: (rowIndex: number, selection: ProtocolDataRow) => void
 }
 
-export const RatesTable = ({ data }: Props) => {
-  const [protocolFilter, setProtocolFilter] = useState<string | null>(null)
-  const [tokenFilter, setTokenFilter] = useState<string | null>(null)
+const makeKey = (r: { protocol: string; token: string }) => `${r.protocol}_${r.token}`
 
-  const filteredData = useMemo(() => {
-    return data
-        .filter((row) => !protocolFilter || row.protocol === protocolFilter)
-        .filter((row) => !tokenFilter || row.token === tokenFilter)
-  }, [data, protocolFilter, tokenFilter])
+export const RatesTable = ({ data, onRowChange }: Props) => {
+  // Build stable option set: one per (protocol, token)
+  const options = useMemo(() => {
+    const seen = new Set<string>()
+    const list = [] as { key: string; protocol: string; token: string; row: ProtocolDataRow }[]
+    for (const r of data) {
+      const key = makeKey(r)
+      if (!seen.has(key)) {
+        seen.add(key)
+        list.push({ key, protocol: r.protocol, token: r.token, row: r })
+      }
+    }
+    return list
+  }, [data])
 
-  const formattedData: FormattedDataRow[] = useMemo(() => {
-    return filteredData.map(formatRow)
-  }, [filteredData])
+  // Initial selections: first two options (or duplicate first if only one exists)
+  const [selections, setSelections] = useState<string[]>([
+    options[0]?.key ?? '',
+    options[1]?.key ?? options[0]?.key ?? '',
+  ])
 
-  const unique = (key: keyof ProtocolDataRow) => [...new Set(data.map(d => d[key]))]
+  // Keep selections in sync if data/options change
+  useEffect(() => {
+    setSelections((prev) => {
+      const next = [...prev]
+      if (!options.find(o => o.key === next[0])) next[0] = options[0]?.key ?? ''
+      if (!options.find(o => o.key === next[1])) next[1] = options[1]?.key ?? options[0]?.key ?? ''
+      return next
+    })
+  }, [options])
+
+  // Lookup selected raw + formatted rows for each table row
+  const selectedRaw: (ProtocolDataRow | null)[] = useMemo(() => {
+    return selections.map(k => options.find(o => o.key === k)?.row ?? null)
+  }, [selections, options])
+
+  const selectedFormatted: (FormattedDataRow | null)[] = useMemo(() => {
+    return selectedRaw.map(r => (r ? formatRow(r) : null))
+  }, [selectedRaw])
+
+  const handleChange = (rowIndex: 0 | 1, newKey: string) => {
+    setSelections(prev => {
+      const updated = computeCoupledSelections(options, [prev[0], prev[1]] as [string, string], rowIndex, newKey);
+      return updated;
+    });
+
+    const picked = options.find(o => o.key === newKey)?.row;
+    if (picked && onRowChange) onRowChange(rowIndex, picked);
+  };
+
+
+  // Render a dropdown cell with token icon + text
+  const DropdownCell = ({ rowIndex }: { rowIndex: number }) => {
+    const currentKey = selections[rowIndex]
+    const current = options.find(o => o.key === currentKey)
+
     return (
-      <div className="space-y-2">
-        <div className="flex gap-4">
-          <select onChange={(e) => setProtocolFilter(e.target.value || null)} value={protocolFilter ?? ''}>
-            <option value="">All Protocols</option>
-            {unique('protocol').map((p) => (
-                <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-
-          <select onChange={(e) => setTokenFilter(e.target.value || null)} value={tokenFilter ?? ''}>
-            <option value="">All Tokens</option>
-            {unique('token').map((t) => (
-                <option key={t} value={t}>{t}</option>
+        <div className="flex items-center gap-2">
+          {current && (
+              <Image
+                  src={`https://storage.googleapis.com/mrgn-public/mrgn-token-icons/${current.token}.png`}
+                  alt={current.token}
+                  width={20}
+                  height={20}
+                  className="rounded-full"
+              />
+          )}
+          <select
+              className="border rounded-md px-2 py-1 bg-transparent"
+              value={currentKey}
+              onChange={(e) => handleChange(rowIndex, e.target.value)}
+          >
+            {options.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.protocol}_{o.token}
+                </option>
             ))}
           </select>
         </div>
+    )
+  }
 
+  const renderDataCells = (row: FormattedDataRow | null) => {
+    if (!row) {
+      return (
+          <>
+            <TableCell colSpan={11} className="text-muted-foreground">No data</TableCell>
+          </>
+      )
+    }
+    return (
+        <>
+          {/* Lending / Borrow */}
+          <TableCell className="text-green-600">{row.lendingRate}</TableCell>
+          <TableCell className="text-yellow-600">{row.borrowingRate}</TableCell>
+
+          {/* Liquidity / Utilization */}
+          <TableCell>{row.liquidity}</TableCell>
+          <TableCell>{row.currentUtilization}</TableCell>
+          <TableCell>{row.targetUtilization}</TableCell>
+
+          {/* Rate Curve */}
+          <TableCell>{row.plateauRate}</TableCell>
+          <TableCell>{row.maxRate}</TableCell>
+
+          {/* Risk */}
+          <TableCell>{row.collateralWeight}</TableCell>
+          <TableCell>{row.liabilityWeight}</TableCell>
+          <TableCell>{row.ltv}</TableCell>
+        </>
+    )
+  }
+
+  return (
+      <div className="space-y-2">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Protocol</TableHead>
-              <TableHead>Token</TableHead>
+              <TableHead>Protocol_Token</TableHead>
               <TableHead>Lending<br />Rate</TableHead>
               <TableHead>Borrow<br />Rate</TableHead>
               <TableHead>Liquidity</TableHead>
@@ -69,29 +154,12 @@ export const RatesTable = ({ data }: Props) => {
           </TableHeader>
 
           <TableBody>
-            {formattedData.map((row) => (
-                <TableRow key={`${row.protocol}-${row.token}`}>
-                  <TableCell className="font-medium">{row.protocol}</TableCell>
-                  <TableCell className="flex items-center gap-2 font-medium">
-                    <Image
-                        src={`https://storage.googleapis.com/mrgn-public/mrgn-token-icons/${row.token}.png`}
-                        alt={row.token}
-                        width={20}
-                        height={20}
-                        className="rounded-full"
-                    />
-                    {row.token}
+            {[0, 1].map((idx) => (
+                <TableRow key={idx}>
+                  <TableCell className="font-medium">
+                    <DropdownCell rowIndex={idx} />
                   </TableCell>
-                  <TableCell className="text-green-600">{row.lendingRate}</TableCell>
-                  <TableCell className="text-yellow-600">{row.borrowingRate}</TableCell>
-                  <TableCell>{row.liquidity}</TableCell>
-                  <TableCell>{row.currentUtilization}</TableCell>
-                  <TableCell>{row.targetUtilization}</TableCell>
-                  <TableCell>{row.plateauRate}</TableCell>
-                  <TableCell>{row.maxRate}</TableCell>
-                  <TableCell>{row.collateralWeight}</TableCell>
-                  <TableCell>{row.liabilityWeight}</TableCell>
-                  <TableCell>{row.ltv}</TableCell>
+                  {renderDataCells(selectedFormatted[idx])}
                 </TableRow>
             ))}
           </TableBody>
