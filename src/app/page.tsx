@@ -1,18 +1,25 @@
 import { RatesTable } from '@/components/rates-table';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { getAllRates } from '@/lib/get-all-rates';
-import { ProtocolDataRow } from '@/lib/types'
+import type { ProtocolDataRow, CurveVectors } from '@/lib/types'
+
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+type rv = ProtocolDataRow & { curves?: CurveVectors }
 
 export default async function Home() {
     try {
         const data = await getAllRates();
 
+        type rv = ProtocolDataRow & { curves?: CurveVectors }
 
-        return <RatesTable data={data.filter((r): r is ProtocolDataRow => r !== null)} />
-            ;
+        return (
+            <RatesTable
+                data={(data ?? []).filter((r): r is rv => r !== null)}
+            />
+        )
     } catch (error) {
         console.error('08.05.2025 deployment - Error fetching rates:', error);
         return (

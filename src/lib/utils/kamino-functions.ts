@@ -118,11 +118,3 @@ export function getLendingAndBorrowingApys(krData: any, utilization: number) {
     return { lendingApy, borrowApy };
 
 }
-
-export function getVectorOfBorrowApys(krData: any, utilization: number) {
-
-    const borrowApr = calculateBorrowAPR(krData, utilization);
-    const borrowApy = calculateAPYFromAPR(borrowApr);
-    return { lendingApy, borrowApy };
-
-}

@@ -2,23 +2,42 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/table'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
 import RateCharts, { RateSeries } from '@/components/rate-charts'
 import { ProtocolDataRow } from '@/lib/types'
-import { formatRow, FormattedDataRow, computeCoupledSelections, MarketOption, buildRateSeriesData } from '@/lib/utils'
-
+import {
+    formatRow,
+    FormattedDataRow,
+    computeCoupledSelections,
+    MarketOption,
+} from '@/lib/utils'
 
 type Props = {
-    data: ProtocolDataRow[]
-    /** Optional: fire when a row selection changes so graphs or parent state can update */
+    data: ProtocolDataRow[] // rows may include { curves?: { util:number[]; borrow:number[]; lend:number[] } }
     onRowChange?: (rowIndex: number, selection: ProtocolDataRow) => void
 }
 
 const makeKey = (r: { protocol: string; token: string }) => `${r.protocol}_${r.token}`
-// Row colors: Line 1 and Line 2 (lend = dashed same color)
-const ROW_COLORS: [string, string] = ['#0072B2', '#E69F00'] // blue, orange
 
-/** Pick the default first selection: marginfi_<alphabetically first token>, else fallback to the first option. */
+/** Parse "12.3%" | "12.3 %" | 0.123 → 12.3 */
+const parsePercent = (val?: string | number | null): number | null => {
+    if (val == null) return null
+    if (typeof val === 'number') return val * 100
+    const m = String(val).match(/-?\d+(\.\d+)?/)
+    return m ? parseFloat(m[0]) : null
+}
+
+// Chart colors: Row 1 (blue), Row 2 (orange)
+const ROW_COLORS: [string, string] = ['#2563eb', '#f97316']
+
+/** Default first selection = marginfi_<alphabetically-first-token>, else first option */
 function pickDefaultFirstKey(options: MarketOption[]): string {
     const marginfi = options.filter(o => o.protocol.toLowerCase() === 'marginfi')
     if (marginfi.length) {
@@ -30,8 +49,22 @@ function pickDefaultFirstKey(options: MarketOption[]): string {
     return options[0]?.key ?? ''
 }
 
+/** Adapt {util[], borrow[], lend[]} -> chart curves; clamps util to [0,100] and aligns lengths */
+function vectorsToCurves(v?: { knots: number[]; borrowRates: number[]; lendingRates: number[] } | null) {
+    if (!v) return { borrowCurve: null as any, lendCurve: null as any }
+    const n = Math.min(v.knots.length, v.borrowRates.length, v.lendingRates.length)
+    const borrowCurve = new Array<{ util: number; rate: number }>(n)
+    const lendCurve = new Array<{ util: number; rate: number }>(n)
+    for (let i = 0; i < n; i++) {
+        const u = Math.max(0, Math.min(100, v.knots[i]))
+        borrowCurve[i] = { util: u, rate: v.borrowRates[i] }
+        lendCurve[i] = { util: u, rate: v.lendingRates[i] }
+    }
+    return { borrowCurve, lendCurve }
+}
+
 export const RatesTable = ({ data, onRowChange }: Props) => {
-    // Build unique (protocol, token) options from incoming data
+    // Unique (protocol, token) options
     const options: MarketOption[] = useMemo(() => {
         const seen = new Set<string>()
         const list: MarketOption[] = []
@@ -45,19 +78,16 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
         return list
     }, [data])
 
-    // Compute the "default" two selections:
-    // - Row 0: marginfi_<first token alphabetically> (or first available option if no marginfi)
-    // - Row 1: auto-derived via computeCoupledSelections from Row 0
+    // Defaults: row 0 marginfi_<first token>; row 1 via coupling helper
     const defaultSelections: [string, string] = useMemo(() => {
         if (options.length === 0) return ['', '']
         const firstKey = pickDefaultFirstKey(options)
         return computeCoupledSelections(options, ['', ''], 0, firstKey)
     }, [options])
 
-    // Two selections (one per table row), initialized from our default rule
     const [selections, setSelections] = useState<[string, string]>(defaultSelections)
 
-    // Keep selections valid / reset to defaults when data/options change or selections are empty/invalid
+    // Keep selections valid when options change
     useEffect(() => {
         setSelections(prev => {
             const keySet = new Set(options.map(o => o.key))
@@ -68,7 +98,7 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
         })
     }, [defaultSelections, options])
 
-    // Look up the selected raw + formatted rows
+    // Look up selected rows
     const selectedRaw: [ProtocolDataRow | null, ProtocolDataRow | null] = useMemo(
         () => [
             options.find(o => o.key === selections[0])?.row ?? null,
@@ -85,23 +115,19 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
         [selectedRaw]
     )
 
-    // Handle a change to either row's Protocol_Token,
-    // and apply coupling rules for the "other" row.
+    // Handle dropdown changes (with coupling)
     const handleChange = (rowIndex: 0 | 1, newKey: string) => {
         setSelections(prev =>
             computeCoupledSelections(options, [prev[0], prev[1]], rowIndex, newKey)
         )
-
-        // Notify parent about the changed row (optional)
         const picked = options.find(o => o.key === newKey)?.row
         if (picked && onRowChange) onRowChange(rowIndex, picked)
     }
 
-    // Dropdown UI in the first column
+    // Dropdown cell
     const DropdownCell = ({ rowIndex }: { rowIndex: 0 | 1 }) => {
         const currentKey = selections[rowIndex]
         const current = options.find(o => o.key === currentKey)
-
         return (
             <div className="flex items-center gap-2">
                 {current && (
@@ -128,7 +154,7 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
         )
     }
 
-    // Render the rest of the data cells for a given formatted row
+    // Data cells
     const renderDataCells = (row: FormattedDataRow | null) => {
         if (!row) {
             return (
@@ -153,18 +179,30 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
         )
     }
 
-    // Prepare two series for the charts component (constant-line fallback for now)
-    // inside the component, replace your chartSeries builder with:
+    // Build two RateSeries for the chart: prefer real curves if present; else constant-line fallbacks
     const chartSeries: [RateSeries, RateSeries] = useMemo(() => {
-        const data = buildRateSeriesData(
-            options,
-            selections,
-            selectedFormatted as [FormattedDataRow | null, FormattedDataRow | null],
-            ROW_COLORS
-        )
-        // Cast the plain data into the chart’s RateSeries shape (it matches keys 1:1).
-        return data as unknown as [RateSeries, RateSeries]
-    }, [options, selections, selectedFormatted])
+        return [0, 1].map((idx) => {
+            const raw = selectedRaw[idx] as (ProtocolDataRow & {
+                curves?: { util: number[]; borrow: number[]; lend: number[] }
+            }) | null
+            const f = selectedFormatted[idx]
+            const key = selections[idx]
+            const opt = options.find(o => o.key === key)
+
+            // Try vectors → curves first
+            const { borrowCurve, lendCurve } = vectorsToCurves(raw?.curves ?? null)
+
+            return {
+                title: opt ? `${opt.protocol}_${opt.token}` : '—',
+                color: ROW_COLORS[idx],
+                borrowCurve: borrowCurve ?? undefined,
+                lendCurve: lendCurve ?? undefined,
+                // Fallbacks (if no vectors present)
+                borrowRatePct: borrowCurve ? null : parsePercent(f?.borrowingRate),
+                lendRatePct: lendCurve ? null : parsePercent(f?.lendingRate),
+            } as RateSeries
+        }) as [RateSeries, RateSeries]
+    }, [options, selections, selectedRaw, selectedFormatted])
 
     return (
         <div className="space-y-6">
@@ -173,43 +211,15 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Protocol_Token</TableHead>
-                        <TableHead>
-                            Lending
-                            <br />
-                            Rate
-                        </TableHead>
-                        <TableHead>
-                            Borrow
-                            <br />
-                            Rate
-                        </TableHead>
+                        <TableHead>Lending<br />Rate</TableHead>
+                        <TableHead>Borrow<br />Rate</TableHead>
                         <TableHead>Liquidity</TableHead>
                         <TableHead>Util</TableHead>
-                        <TableHead>
-                            Target
-                            <br />
-                            Util
-                        </TableHead>
-                        <TableHead>
-                            Plateau
-                            <br />
-                            Rate
-                        </TableHead>
-                        <TableHead>
-                            Max
-                            <br />
-                            Rate
-                        </TableHead>
-                        <TableHead>
-                            Collateral
-                            <br />
-                            Weight
-                        </TableHead>
-                        <TableHead>
-                            Liability
-                            <br />
-                            Weight
-                        </TableHead>
+                        <TableHead>Target<br />Util</TableHead>
+                        <TableHead>Plateau<br />Rate</TableHead>
+                        <TableHead>Max<br />Rate</TableHead>
+                        <TableHead>Collateral<br />Weight</TableHead>
+                        <TableHead>Liability<br />Weight</TableHead>
                         <TableHead>LTV</TableHead>
                     </TableRow>
                 </TableHeader>

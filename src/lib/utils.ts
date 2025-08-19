@@ -1,10 +1,31 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { CurveVectors, CurvePoint } from '@/lib/types'
 
 export type Environment = "production" | "staging";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/**
+ * Return `n` equally spaced percent points from 0 to 100 (inclusive).
+ * Ensures at least 2 points, clamps/normalizes input, and avoids
+ * floating-point tails (e.g., 99.999999) by rounding to 6 decimals.
+ *
+ * Examples:
+ *   makePercentGrid(5)   -> [0, 25, 50, 75, 100]
+ *   makePercentGrid(101) -> [0, 1, 2, ..., 100]
+ */
+export function makePercentGrid(n: number): number[] {
+    const count = Math.max(2, Math.floor(Number.isFinite(n) ? n : 0))
+    const step = 100 / (count - 1)
+    const out = new Array<number>(count)
+    for (let i = 0; i < count; i++) {
+        // round to tame FP error while keeping monotonicity
+        out[i] = Number((i * step).toFixed(6))
+    }
+    return out
 }
 
 
@@ -60,7 +81,6 @@ export function buildRateSeriesData(
         }
     }) as [RateSeriesData, RateSeriesData]
 }
-
 
 
 /**
@@ -276,3 +296,19 @@ export function transformBorrowCurve(curve: [number, number][]) {
     };
 }
 
+
+/** Convert 3 vectors into {borrowCurve, lendCurve} points for the chart */
+export function vectorsToCurves(v: CurveVectors): {
+    borrowCurve: CurvePoint[]
+    lendCurve: CurvePoint[]
+} {
+    const n = Math.min(v.knots.length, v.borrowRates.length, v.lendingRates.length)
+    const borrowCurve: CurvePoint[] = new Array(n)
+    const lendCurve: CurvePoint[] = new Array(n)
+    for (let i = 0; i < n; i++) {
+        const u = v.knots[i]
+        borrowCurve[i] = { knot: u, rate: v.borrowRates[i] }
+        lendCurve[i] = { knot: u, rate: v.lendingRates[i] }
+    }
+    return { borrowCurve, lendCurve }
+}
