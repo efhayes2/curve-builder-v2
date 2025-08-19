@@ -2,22 +2,11 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/table'
 import RateCharts, { RateSeries } from '@/components/rate-charts'
 import { ProtocolDataRow } from '@/lib/types'
-import {
-    formatRow,
-    FormattedDataRow,
-    computeCoupledSelections,
-    MarketOption,
-} from '@/lib/utils'
+import { formatRow, FormattedDataRow, computeCoupledSelections, MarketOption, buildRateSeriesData } from '@/lib/utils'
+
 
 type Props = {
     data: ProtocolDataRow[]
@@ -26,17 +15,8 @@ type Props = {
 }
 
 const makeKey = (r: { protocol: string; token: string }) => `${r.protocol}_${r.token}`
-
-/** Accepts "12.3%", "12.3 %", or a decimal number like 0.123 → returns percentage number 12.3 */
-const parsePercent = (val?: string | number | null): number | null => {
-    if (val == null) return null
-    if (typeof val === 'number') return val * 100
-    const m = String(val).match(/-?\d+(\.\d+)?/)
-    return m ? parseFloat(m[0]) : null
-}
-
 // Row colors: Line 1 and Line 2 (lend = dashed same color)
-const ROW_COLORS: [string, string] = ['#2563eb', '#f97316'] // blue, orange
+const ROW_COLORS: [string, string] = ['#0072B2', '#E69F00'] // blue, orange
 
 /** Pick the default first selection: marginfi_<alphabetically first token>, else fallback to the first option. */
 function pickDefaultFirstKey(options: MarketOption[]): string {
@@ -174,21 +154,17 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
     }
 
     // Prepare two series for the charts component (constant-line fallback for now)
-    const chartSeries: [RateSeries, RateSeries] = [0, 1].map(idx => {
-        const f = selectedFormatted[idx]
-        const key = selections[idx]
-        const opt = options.find(o => o.key === key)
-
-        return {
-            title: opt ? `${opt.protocol}_${opt.token}` : '—',
-            color: ROW_COLORS[idx],
-            borrowRatePct: parsePercent(f?.borrowingRate),
-            lendRatePct: parsePercent(f?.lendingRate),
-            // Later you can pass full curves instead:
-            // borrowCurve: curves.borrow[idx] ?? null,
-            // lendCurve: curves.lend[idx] ?? null,
-        } as RateSeries
-    }) as [RateSeries, RateSeries]
+    // inside the component, replace your chartSeries builder with:
+    const chartSeries: [RateSeries, RateSeries] = useMemo(() => {
+        const data = buildRateSeriesData(
+            options,
+            selections,
+            selectedFormatted as [FormattedDataRow | null, FormattedDataRow | null],
+            ROW_COLORS
+        )
+        // Cast the plain data into the chart’s RateSeries shape (it matches keys 1:1).
+        return data as unknown as [RateSeries, RateSeries]
+    }, [options, selections, selectedFormatted])
 
     return (
         <div className="space-y-6">

@@ -1,12 +1,13 @@
 // src/lib/protocols/kamino.ts
 
-import { getLendingAndBorrowingApys} from '@/lib/utils/kamino-functions'
+import { getLendingAndBorrowingApys } from '@/lib/utils/kamino-functions'
 import { optimalUtilizationMap, mfiDefaultOptimal } from '@/lib/utils/shared-data';
-import { Connection, PublicKey } from '@solana/web3.js'
-import { KaminoMarket } from '@kamino-finance/klend-sdk'
 import { ProtocolDataRow } from '@/lib/types'
 import { TokenData } from '@/lib/utils' // where your TokenData lives
 import { transformBorrowCurve, writeBorrowCurveLog } from '@/lib/utils/borrow-curve'
+
+import { Connection, PublicKey } from '@solana/web3.js'
+import { KaminoMarket} from '@kamino-finance/klend-sdk'
 
 
 
@@ -82,8 +83,8 @@ export async function getKaminoRates(
                         fixedHostInterestRate
                     };
 
-                    // ---- Calculate rates ---- Replication
-                    /*const z_apr =  calculateSupplyAPR(wrappedReserveData, utilization);
+                    /*// ---- Calculate rates ---- Replication
+                    const z_apr =  calculateSupplyAPR(wrappedReserveData, utilization);
                     const lendingApy1 = calculateAPYFromAPR(z_apr);
                     const z_borrowApr = calculateBorrowAPR(wrappedReserveData, utilization);
                     const borrowApy1 = calculateAPYFromAPR(z_borrowApr);

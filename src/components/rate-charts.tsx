@@ -107,12 +107,6 @@ const valueAt = (curve: CurvePoint[] | null | undefined, util: number): number |
     const t = (util - a.util) / Math.max(1e-9, (b.util - a.util))
     return a.rate + t * (b.rate - a.rate)
 }
-
-const makeConstLine = (ratePct: number): CurvePoint[] => [
-    { util: 0, rate: ratePct },
-    { util: 100, rate: ratePct },
-]
-
 const buildMergedData = (
     s0: RateSeries,
     s1: RateSeries,
@@ -198,10 +192,14 @@ const RateCharts: React.FC<Props> = ({ series, className }) => {
                             />
 
                             {/* Four lines */}
-                            <Line name={`${s0.title} Borrow`} type="linear" dataKey="b0" dot={false} stroke={s0.color} strokeWidth={2} isAnimationActive={false} />
-                            <Line name={`${s0.title} Lend`}   type="linear" dataKey="l0" dot={false} stroke={s0.color} strokeDasharray="6 6" strokeWidth={2} isAnimationActive={false} />
-                            <Line name={`${s1.title} Borrow`} type="linear" dataKey="b1" dot={false} stroke={s1.color} strokeWidth={2} isAnimationActive={false} />
-                            <Line name={`${s1.title} Lend`}   type="linear" dataKey="l1" dot={false} stroke={s1.color} strokeDasharray="6 6" strokeWidth={2} isAnimationActive={false} />
+                            <Line name={`${s0.title} Borrow`} type="linear" dataKey="b0" dot={false}
+                                  stroke={s0.color} strokeWidth={2} isAnimationActive={false} />
+                            <Line name={`${s0.title} Lend`}   type="linear" dataKey="l0" dot={false}
+                                  stroke={s0.color} strokeDasharray="6 6" strokeWidth={2} isAnimationActive={false} />
+                            <Line name={`${s1.title} Borrow`} type="linear" dataKey="b1" dot={false}
+                                  stroke={s1.color} strokeWidth={2} isAnimationActive={false} />
+                            <Line name={`${s1.title} Lend`}   type="linear" dataKey="l1" dot={false} stroke={s1.color}
+                                  strokeDasharray="6 6" strokeWidth={2} isAnimationActive={false} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

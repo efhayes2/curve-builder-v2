@@ -7,16 +7,61 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-import { ProtocolDataRow } from "@/lib/types";
 
+// Add these helpers to keep the component lean and testable.
 
-// Types used by the table for the option list
+import type { ProtocolDataRow } from '@/lib/types'
+
 export type MarketOption = {
-    key: string;               // `${protocol}_${token}`
-    protocol: string;
-    token: string;
-    row: ProtocolDataRow;
-};
+    key: string
+    protocol: string
+    token: string
+    row: ProtocolDataRow
+}
+
+/** Accepts "12.3%", "12.3 %", or a decimal number like 0.123 → returns percentage number 12.3 */
+export const parsePercent = (val?: string | number | null): number | null => {
+    if (val == null) return null
+    if (typeof val === 'number') return val * 100
+    const m = String(val).match(/-?\d+(\.\d+)?/)
+    return m ? parseFloat(m[0]) : null
+}
+
+// Shape that matches what the chart needs, without importing the component type.
+export type RateSeriesData = {
+    title: string
+    color: string
+    borrowRatePct: number | null
+    lendRatePct: number | null
+    // (optional future fields)
+    borrowCurve?: Array<{ util: number; rate: number }> | null
+    lendCurve?: Array<{ util: number; rate: number }> | null
+}
+
+/**
+ * Build the two chart series from current selections and formatted rows.
+ * Pure: no React hooks, no component state.
+ */
+export function buildRateSeriesData(
+    options: MarketOption[],
+    selections: [string, string],
+    formatted: [/* FormattedDataRow */ any | null, any | null],
+    colors: [string, string]
+): [RateSeriesData, RateSeriesData] {
+    return [0, 1].map((idx) => {
+        const f = formatted[idx]
+        const key = selections[idx]
+        const opt = options.find((o) => o.key === key)
+        return {
+            title: opt ? `${opt.protocol}_${opt.token}` : '—',
+            color: colors[idx],
+            borrowRatePct: parsePercent(f?.borrowingRate),
+            lendRatePct: parsePercent(f?.lendingRate),
+        }
+    }) as [RateSeriesData, RateSeriesData]
+}
+
+
 
 /**
  * Apply coupling rules when one row's Protocol_Token selection changes.
