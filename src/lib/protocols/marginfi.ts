@@ -1,10 +1,11 @@
-import { TokenData } from '@/lib/utils'
+import {makePercentGrid, TokenData} from '@/lib/utils'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { aprToApy, Wallet } from '@mrgnlabs/mrgn-common'
 import { MarginfiClient, getConfig } from '@mrgnlabs/marginfi-client-v2'
 import { ProtocolDataRow } from '@/lib/types'
 import type { CurveVectors } from '@/lib/types'
 import { optimalUtilizationMap } from '@/lib/utils/shared-data'
+import { getMarginLendingAndBorrowingApys } from '../utils/marginfi-functions'
 
 /**
  * Local, synchronous helper to build curve vectors for a Marginfi market.
@@ -12,20 +13,32 @@ import { optimalUtilizationMap } from '@/lib/utils/shared-data'
  * - Return percent units for all arrays (e.g., 7.2 for 7.2%)
  * - util must be monotonic in [0..100]
  */
-function getMarginfiCurveVectors(row: ProtocolDataRow): CurveVectors {
+function getMarginfiCurveVectors(optimalUtilization: number,
+                                 plateauRate: number,
+                                 maxRate: number,
+                                 knots: number[],
+                                 borrowFee: number): CurveVectors {
+
+
+    return getMarginLendingAndBorrowingApys(optimalUtilization * 100.0,
+        plateauRate * 100.0,
+        maxRate * 100.0,
+        knots,
+        borrowFee)
 
     // Simple fallback: flat lines at current borrow/lend rates.
     // Swap this for a sampled curve built from bank rate config when ready.
-    return {
-        knots: [0, 25, 50, 75, 100],
-        borrowRates: [3.2, 4.1, 5.7, 6.9, 10.3],
-        lendingRates: [1.1, 2.1, 2.5, 3.6, 5.7],
-    }
+    // return {
+    //     knots: [0, 25, 50, 75, 100],
+    //     borrowRates: [3.2, 4.1, 5.7, 6.9, 10.3],
+    //     lendingRates: [1.1, 2.1, 2.5, 3.6, 5.7],
+    // }
 }
 
 export async function getMarginfiRates(
     connection: Connection,
-    tokenData: Record<string, TokenData>
+    tokenData: Record<string, TokenData>,
+    numberOfKnots = 21 // number of points for curves
 ): Promise<Array<ProtocolDataRow & { curves: CurveVectors }>> {
     const mfiClient = await MarginfiClient.fetch(
         getConfig('production'),
@@ -94,8 +107,11 @@ export async function getMarginfiRates(
                         }
                     }
 
+                    const borrowFee  = bank.config.interestRateConfig.protocolIrFee.toNumber() / 100.0
+                    const knots = makePercentGrid(numberOfKnots) // 0..100 in 1% steps
                     // Attach curve vectors (stubbed for now)
-                    const curves = getMarginfiCurveVectors(rate)
+                    const curves = getMarginfiCurveVectors(optimalUtilization_,
+                        plateauInterestRate_, maxInterestRate_, knots, borrowFee)
 
                     // Clamp/sanitize just in case future impl returns mismatched lengths
                     const n = Math.min(curves.knots.length, curves.borrowRates.length, curves.lendingRates.length)

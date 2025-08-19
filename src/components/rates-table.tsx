@@ -197,9 +197,11 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
                 color: ROW_COLORS[idx],
                 borrowCurve: borrowCurve ?? undefined,
                 lendCurve: lendCurve ?? undefined,
-                // Fallbacks (if no vectors present)
                 borrowRatePct: borrowCurve ? null : parsePercent(f?.borrowingRate),
                 lendRatePct: lendCurve ? null : parsePercent(f?.lendingRate),
+                protocol: opt?.protocol, // <-- so chart can detect "Marginfi"
+                currentUtilPct: parsePercent(f?.currentUtilization) ?? null,
+                targetUtilPct: parsePercent(f?.targetUtilization) ?? null,
             } as RateSeries
         }) as [RateSeries, RateSeries]
     }, [options, selections, selectedRaw, selectedFormatted])
