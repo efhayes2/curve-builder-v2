@@ -5,7 +5,7 @@ export type TokenData = { category: string; tokenAddress: string; tokenSymbol: s
 
 export function getTokenDataMap(): Record<string, TokenData> {
     const useFullTable = false;
-    const useTestTable = true;
+    const useTestTable = false;
     if (useFullTable)
         return getTokenDataMapFull()
     else if (useTestTable)
