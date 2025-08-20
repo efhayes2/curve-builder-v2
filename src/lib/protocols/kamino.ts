@@ -3,11 +3,12 @@
 import { getLendingAndBorrowingApys } from '@/lib/utils/kamino-functions'
 import { optimalUtilizationMap, mfiDefaultOptimal } from '@/lib/utils/shared-data';
 import { ProtocolDataRow, CurveVectors } from '@/lib/types'
-import {makePercentGrid, TokenData} from '@/lib/utils' // where your TokenData lives
+import {makePercentGrid} from '@/lib/utils' // where your TokenData lives
 import { transformBorrowCurve } from '@/lib/utils/borrow-curve'
 
 import { KaminoMarket } from '@kamino-finance/klend-sdk'
 import { PublicKey, Connection } from '@solana/web3.js'
+import {TokenData} from "@/data/token-data";
 
 
 // Collect per-token curves already transformed to {knots, values}

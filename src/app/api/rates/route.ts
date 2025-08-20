@@ -1,8 +1,8 @@
 import { Connection } from '@solana/web3.js'
-import { getTokenDataMap } from '@/lib/utils'
 import { getKaminoRates } from '@/lib/protocols/kamino'
 import { getMarginfiRates } from '@/lib/protocols/marginfi'
 import {ProtocolDataRow} from "@/lib/types";
+import {getTokenDataMap} from "@/data/token-data";
 
 export async function GET() {
     try {

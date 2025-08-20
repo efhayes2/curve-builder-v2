@@ -1,4 +1,4 @@
-import {makePercentGrid, TokenData} from '@/lib/utils'
+import {makePercentGrid} from '@/lib/utils'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { aprToApy, Wallet } from '@mrgnlabs/mrgn-common'
 import { MarginfiClient, getConfig } from '@mrgnlabs/marginfi-client-v2'
@@ -6,6 +6,7 @@ import { ProtocolDataRow } from '@/lib/types'
 import type { CurveVectors } from '@/lib/types'
 import { optimalUtilizationMap } from '@/lib/utils/shared-data'
 import { getMarginLendingAndBorrowingApys } from '../utils/marginfi-functions'
+import {TokenData} from "@/data/token-data";
 
 /**
  * Local, synchronous helper to build curve vectors for a Marginfi market.
