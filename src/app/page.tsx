@@ -13,14 +13,14 @@ export default async function Home() {
     try {
         const data = await getAllRates();
 
-        type rv = ProtocolDataRow & { curves?: CurveVectors }
+        type Row = ProtocolDataRow & { curves: CurveVectors };
 
         return (
             <RatesTable
-                data={(data ?? []).filter((r): r is rv => r !== null)}
+                data={(data ?? []).filter((r): r is Row => !!r && !!r.curves)}
             />
-        )
-    } catch (error) {
+        );
+    }  catch (error) {
         console.error('08.05.2025 deployment - Error fetching rates:', error);
         return (
             <div className="flex items-center justify-center">
