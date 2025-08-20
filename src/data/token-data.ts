@@ -1,3 +1,5 @@
+// Data used for token addresses, etc.
+
 
 export type TokenData = { category: string; tokenAddress: string; tokenSymbol: string; };
 
