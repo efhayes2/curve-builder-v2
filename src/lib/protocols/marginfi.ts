@@ -100,6 +100,12 @@ export async function getMarginfiRates(
                         ltv: ltv_,
                     }
 
+                    if (rate.token == "SOL") {
+                        rate.plateauRate = 0.0625;
+                        rate.maxRate = 0.45;
+                        rate.targetUtilization = 0.92;
+                    }
+
                     // normalize undefined/null → NaN for downstream formatting
                     for (const [k, v] of Object.entries(rate)) {
                         if (v === undefined || v === null) {
