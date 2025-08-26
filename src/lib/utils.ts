@@ -166,7 +166,7 @@ export function formatRow(row: ProtocolDataRow): FormattedDataRow {
         token: row.token,
         liquidity: formatCompactNumber(row.liquidity),
         currentUtilization: formatPercent(row.currentUtilization),
-        targetUtilization: formatPercent(row.targetUtilization),
+        optimalUtilization: formatPercent(row.optimalUtilization),
         plateauRate: formatPercent(row.plateauRate, 2),
         maxRate: formatPercent(row.maxRate, 0),
         lendingRate: formatPercent(row.lendingRate, 2),

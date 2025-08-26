@@ -3,7 +3,7 @@ export type ProtocolDataRow = {
   token: string;
   liquidity: number | string;
   currentUtilization: number | string;
-  targetUtilization: number | string;
+  optimalUtilization: number | string;
   plateauRate: number | string;
   maxRate: number | string;
   lendingRate: number | string;

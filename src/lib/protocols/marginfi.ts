@@ -39,7 +39,7 @@ function getMarginfiCurveVectors(optimalUtilization: number,
 export async function getMarginfiRates(
     connection: Connection,
     tokenData: Record<string, TokenData>,
-    numberOfKnots = 21 // number of points for curves
+    numberOfKnots = 101 // number of points for curves
 ): Promise<Array<ProtocolDataRow & { curves: CurveVectors }>> {
     const mfiClient = await MarginfiClient.fetch(
         getConfig('production'),
@@ -77,10 +77,18 @@ export async function getMarginfiRates(
 
                     const bankConfig = bank.config
                     const bankRateConfig = bankConfig.interestRateConfig
-                    const optimalUtilization_ =
-                        bankRateConfig.optimalUtilizationRate.toNumber()
-                    const plateauInterestRate_ = bankRateConfig.plateauInterestRate.toNumber()
-                    const maxInterestRate_ = bankRateConfig.maxInterestRate.toNumber()
+
+                    const opt1 = bankRateConfig.optimalUtilizationRate.toNumber()
+                    const plateau1 = bankRateConfig.plateauInterestRate.toNumber()
+                    const max1 = bankRateConfig.maxInterestRate.toNumber()
+                    //
+                    // const optimalUtilization_ = metadata.tokenSymbol == "SOL" ? 0.92 : opt1;
+                    // const plateauInterestRate_ = metadata.tokenSymbol == "SOL" ? 0.0625 : plateau1;
+                    // const maxInterestRate_ = metadata.tokenSymbol == "SOL" ? 0.45 : max1;
+
+                    const optimalUtilization_ = opt1;
+                    const plateauInterestRate_ = plateau1;
+                    const maxInterestRate_ = max1;
 
                     // keep optimal map updated
                     optimalUtilizationMap[metadata.tokenSymbol] = optimalUtilization_
@@ -90,7 +98,7 @@ export async function getMarginfiRates(
                         token: metadata.tokenSymbol,
                         liquidity: liquidity_,
                         currentUtilization: utilization_,
-                        targetUtilization: optimalUtilization_,
+                        optimalUtilization: optimalUtilization_,
                         plateauRate: plateauInterestRate_,
                         maxRate: maxInterestRate_,
                         lendingRate: lendingRate_,
@@ -100,11 +108,6 @@ export async function getMarginfiRates(
                         ltv: ltv_,
                     }
 
-                    if (rate.token == "SOL") {
-                        rate.plateauRate = 0.0625;
-                        rate.maxRate = 0.45;
-                        rate.targetUtilization = 0.92;
-                    }
 
                     // normalize undefined/null → NaN for downstream formatting
                     for (const [k, v] of Object.entries(rate)) {
@@ -114,7 +117,7 @@ export async function getMarginfiRates(
                         }
                     }
 
-                    const borrowFee  = bank.config.interestRateConfig.protocolIrFee.toNumber() / 100.0
+                    const borrowFee  = bank.config.interestRateConfig.protocolIrFee.toNumber();
                     const knots = makePercentGrid(numberOfKnots) // 0..100 in 1% steps
                     // Attach curve vectors (stubbed for now)
                     const curves = getMarginfiCurveVectors(optimalUtilization_,

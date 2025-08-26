@@ -169,7 +169,7 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
                 <TableCell className="text-yellow-600">{row.borrowingRate}</TableCell>
                 <TableCell>{row.liquidity}</TableCell>
                 <TableCell>{row.currentUtilization}</TableCell>
-                <TableCell>{row.targetUtilization}</TableCell>
+                <TableCell>{row.optimalUtilization}</TableCell>
                 <TableCell>{row.plateauRate}</TableCell>
                 <TableCell>{row.maxRate}</TableCell>
                 <TableCell>{row.collateralWeight}</TableCell>
@@ -201,7 +201,7 @@ export const RatesTable = ({ data, onRowChange }: Props) => {
                 lendRatePct: lendCurve ? null : parsePercent(f?.lendingRate),
                 protocol: opt?.protocol, // <-- so chart can detect "Marginfi"
                 currentUtilPct: parsePercent(f?.currentUtilization) ?? null,
-                targetUtilPct: parsePercent(f?.targetUtilization) ?? null,
+                targetUtilPct: parsePercent(f?.optimalUtilization) ?? null,
             } as RateSeries
         }) as [RateSeries, RateSeries]
     }, [options, selections, selectedRaw, selectedFormatted])

@@ -123,7 +123,7 @@ export async function getKaminoRates(
                     token: metadata.tokenSymbol,
                     liquidity: liquidity_,
                     currentUtilization: utilization,
-                    targetUtilization: marginfiOptimal,
+                    optimalUtilization: marginfiOptimal,
                     plateauRate: borrowApyAtMarginfiOptimal,
                     maxRate: maxBorrowApy,
                     lendingRate: lendingRate_,
